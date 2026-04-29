@@ -1,0 +1,71 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const auth = require('../middleware/auth');
+const User = require('../models/User');
+const Stock = require('../models/Stock');
+const Portfolio = require('../models/Portfolio');
+
+const router = express.Router();
+
+router.post('/buy', auth, async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { ticker, quantity } = req.body;
+    const qty = parseInt(quantity);
+
+    if (!qty || qty <= 0) throw new Error('Invalid quantity');
+
+    const stock = await Stock.findOne({ ticker: ticker.toUpperCase() }).session(session);
+    if (!stock) throw new Error('Stock not found');
+
+    const totalCost = stock.price * qty;
+
+    const user = await User.findById(req.user.id).session(session);
+    if (user.walletBalance < totalCost) {
+      throw new Error('Insufficient funds');
+    }
+
+    user.walletBalance -= totalCost;
+    await user.save({ session });
+
+    await Portfolio.findOneAndUpdate(
+      { user: user._id, stock: stock._id },
+      { $inc: { sharesHeld: qty } },
+      { upsert: true, new: true, session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.json({ 
+      message: `Successfully bought ${qty} shares of ${ticker}`,
+      newBalance: user.walletBalance 
+    });
+
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.get('/my-portfolio', auth, async (req, res) => {
+  try {
+    const portfolio = await Portfolio.find({ user: req.user.id })
+      .populate('stock', 'ticker price');
+    
+    const formatted = portfolio.map(item => ({
+      ticker: item.stock.ticker,
+      sharesHeld: item.sharesHeld,
+      lastKnownPrice: item.stock.price
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+module.exports = router;
