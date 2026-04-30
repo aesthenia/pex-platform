@@ -8,36 +8,36 @@ const Portfolio = require('../models/Portfolio');
 const router = express.Router();
 
 router.post('/buy', auth, async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const { ticker, quantity } = req.body;
     const qty = parseInt(quantity);
 
-    if (!qty || qty <= 0) throw new Error('Invalid quantity');
+    if (!qty || qty <= 0) return res.status(400).json({ error: 'Invalid quantity' });
 
-    const stock = await Stock.findOne({ ticker: ticker.toUpperCase() }).session(session);
-    if (!stock) throw new Error('Stock not found');
+    const stock = await Stock.findOne({ ticker: ticker.toUpperCase() });
+    if (!stock) return res.status(404).json({ error: 'Stock not found' });
+
+    if (stock.owner.toString() === req.user.id) {
+      return res.status(400).json({ 
+        error: 'Forbidden: You cannot buy your own stock. You are the issuer.' 
+      });
+    }
 
     const totalCost = stock.price * qty;
 
-    const user = await User.findById(req.user.id).session(session);
+    const user = await User.findById(req.user.id);
     if (user.walletBalance < totalCost) {
-      throw new Error('Insufficient funds');
+      return res.status(400).json({ error: 'Insufficient funds' });
     }
 
     user.walletBalance -= totalCost;
-    await user.save({ session });
+    await user.save();
 
     await Portfolio.findOneAndUpdate(
       { user: user._id, stock: stock._id },
       { $inc: { sharesHeld: qty } },
-      { upsert: true, new: true, session }
+      { upsert: true, new: true }
     );
-
-    await session.commitTransaction();
-    session.endSession();
 
     res.json({ 
       message: `Successfully bought ${qty} shares of ${ticker}`,
@@ -45,9 +45,7 @@ router.post('/buy', auth, async (req, res) => {
     });
 
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: 'Trade failed: ' + err.message });
   }
 });
 
