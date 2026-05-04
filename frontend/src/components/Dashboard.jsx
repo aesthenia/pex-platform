@@ -10,13 +10,20 @@ export const Dashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [mRes, pRes] = await Promise.all([api.get('/api/stocks/market'), api.get('/api/trade/my-portfolio')]);
+      const [mRes, pRes, uRes] = await Promise.all([
+        api.get('/api/stocks/market'),
+        api.get('/api/trade/my-portfolio'),
+        api.get('/api/auth/me')
+      ]);
+
       setMarketStocks(mRes.data);
       setPortfolio(pRes.data);
+      setUser(uRes.data);
+
       const initialPrices = {};
       mRes.data.forEach(s => initialPrices[s.ticker] = s.price);
       setPrices(initialPrices);
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error("Fetch error", err); }
   };
 
   useEffect(() => { fetchData(); }, []);
