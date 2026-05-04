@@ -49,9 +49,9 @@ router.post('/buy', auth, async (req, res) => {
 
     console.log(`[Trade] User ${user.username} bought ${qty} shares of ${ticker}`);
 
-    res.json({ 
+    res.json({
       message: `Successfully bought ${qty} shares of ${ticker}`,
-      newBalance: user.walletBalance 
+      newBalance: user.walletBalance
     });
 
   } catch (err) {
@@ -59,9 +59,27 @@ router.post('/buy', auth, async (req, res) => {
     session.endSession();
 
     console.error(`[Trade Error] ${err.message}`);
-    
+
     res.status(400).json({ error: err.message });
   }
+
+  router.get('/my-portfolio', auth, async (req, res) => {
+    try {
+      const portfolio = await Portfolio.find({ user: req.user.id })
+        .populate('stock', 'ticker price');
+
+      const formatted = portfolio.map(item => ({
+        ticker: item.stock.ticker,
+        sharesHeld: item.sharesHeld,
+        lastKnownPrice: item.stock.price
+      }));
+
+      res.json(formatted);
+    } catch (err) {
+      console.error('[Portfolio Fetch Error]', err.message);
+      res.status(500).json({ error: 'Server error while fetching portfolio' });
+    }
+  });
 });
 
 module.exports = router;

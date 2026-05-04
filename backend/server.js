@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const connectDB = require('./config/db');
-const initWebSocket = require('./ws/wsHandler'); // <--- Импорт
+const initWebSocket = require('./ws/wsHandler');
 const stockRoutes = require('./routes/stocks');
 const tradeRoutes = require('./routes/trade');
 
