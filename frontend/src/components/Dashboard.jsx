@@ -50,7 +50,7 @@ export const Dashboard = () => {
 
   return (
     <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
-      
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
         <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#666' }}>
@@ -67,40 +67,46 @@ export const Dashboard = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '30px' }}>
-        
+
         <div>
-          <div style={{ ...cardStyle, padding: '0' }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between' }}>
-              <h3 style={{ margin: 0 }}>Public Exchange</h3>
-              <span style={{ fontSize: '12px', color: '#10b981' }}>● Live Market</span>
-            </div>
-            {marketStocks.map(stock => (
-              <div key={stock.ticker} style={rowStyle}>
-                <div>
-                  <span style={tickerBadge}>${stock.ticker}</span>
-                  <div style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>by {stock.owner.username}</div>
+          <div style={cardStyle}>
+            <h3 style={{ marginBottom: '20px' }}>Public Exchange</h3>
+
+            {marketStocks.length === 0 ? (
+              <p style={{ color: '#999', textAlign: 'center' }}>Рынок пуст. Создайте первую акцию!</p>
+            ) : (
+              marketStocks.map(stock => (
+                <div key={stock.ticker} style={rowStyle}>
+                  <div>
+                    <span style={tickerBadge}>${stock.ticker}</span>
+                    <div style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>
+                      Owner: {stock.owner?.username || 'System'}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
+                      ${(prices[stock.ticker] || stock.price).toFixed(2)}
+                    </div>
+                    {user.id !== stock.owner?._id ? (
+                      <button onClick={() => handleBuy(stock.ticker)} style={btnBuy}>Buy Shares</button>
+                    ) : (
+                      <button onClick={() => updateMyPrice(stock.ticker)} style={btnManage}>Update Price</button>
+                    )}
+                  </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold' }}>${(prices[stock.ticker] || stock.price).toFixed(2)}</div>
-                  {user.id !== stock.owner._id ? (
-                    <button onClick={() => handleBuy(stock.ticker)} style={btnBuy}>Buy Shares</button>
-                  ) : (
-                    <button onClick={() => updateMyPrice(stock.ticker)} style={btnManage}>Update Price</button>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
+
           {!user.ticker ? (
             <div style={cardStyle}>
               <h4 style={{ margin: '0 0 15px 0' }}><PlusCircle size={18} style={{ verticalAlign: 'middle', marginRight: '5px' }} /> Issue Stock</h4>
               <form onSubmit={handleCreateStock} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <input style={inputStyle} placeholder="Ticker (e.g. BTC)" onChange={e => setNewStock({...newStock, ticker: e.target.value})} required />
-                <input style={inputStyle} type="number" placeholder="Price" onChange={e => setNewStock({...newStock, price: e.target.value})} required />
+                <input style={inputStyle} placeholder="Ticker (e.g. BTC)" onChange={e => setNewStock({ ...newStock, ticker: e.target.value })} required />
+                <input style={inputStyle} type="number" placeholder="Price" onChange={e => setNewStock({ ...newStock, price: e.target.value })} required />
                 <button type="submit" style={btnPrimary}>Launch IPO</button>
               </form>
             </div>
