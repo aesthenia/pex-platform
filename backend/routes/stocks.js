@@ -37,37 +37,24 @@ router.post('/create', auth, async (req, res) => {
 });
 
 router.patch('/update-price', auth, async (req, res) => {
-  try {
-    const { ticker, newPrice } = req.body;
+  const { ticker, newPrice } = req.body;
+  const stock = await Stock.findOne({ ticker: ticker.toUpperCase() });
 
-    const stock = await Stock.findOne({ ticker: ticker.toUpperCase() });
-    if (!stock) return res.status(404).json({ error: 'Stock not found' });
+  if (!stock) return res.status(404).json({ error: 'Stock not found' });
 
-    if (stock.owner.toString() !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden: You are not the owner of this stock' });
-    }
-
-    stock.price = Number(newPrice);
-    await stock.save();
-
-    const updateMessage = JSON.stringify({
-      type: "TICKER_UPDATE",
-      payload: { 
-        ticker: stock.ticker, 
-        price: stock.price 
-      }
-    });
-
-    req.wss.clients.forEach((client) => {
-      if (client.readyState === 1) {
-        client.send(updateMessage);
-      }
-    });
-
-    res.json({ message: 'Price updated and broadcasted', stock });
-  } catch (err) {
-    res.status(500).json({ error: 'Server error during price update' });
+  if (stock.owner.toString() !== req.user.id) {
+    return res.status(403).json({ error: 'Forbidden: You are NOT the owner of this stock' });
   }
+
+  stock.price = Number(newPrice);
+  await stock.save();
+
+  const updateMessage = JSON.stringify({
+    type: "TICKER_UPDATE",
+    payload: { ticker: stock.ticker, price: stock.price }
+  });
+  req.wss.clients.forEach(c => c.readyState === 1 && c.send(updateMessage));
+  res.json(stock);
 });
 
 router.get('/market', async (req, res) => {
