@@ -106,7 +106,7 @@ export const Dashboard = () => {
                     <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
                       ${(prices[stock.ticker] || stock.price).toFixed(2)}
                     </div>
-                    {user.id !== stock.owner?._id ? (
+                    {(user._id || user.id) !== (stock.owner?._id || stock.owner) ? (
                       <button onClick={() => handleBuy(stock.ticker)} style={btnBuy}>Buy Shares</button>
                     ) : (
                       <button onClick={() => updateMyPrice(stock.ticker)} style={btnManage}>Update Price</button>
