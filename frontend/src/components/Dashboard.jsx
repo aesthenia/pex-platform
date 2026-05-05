@@ -47,6 +47,18 @@ export const Dashboard = () => {
     } catch (err) { alert(err.response?.data?.error); }
   };
 
+  const handleSell = async (ticker) => {
+    const qty = prompt(`How many shares of $${ticker} do you want to sell?`);
+    if (!qty) return;
+    try {
+      await api.post('/api/trade/sell', { ticker, quantity: qty });
+      fetchData();
+      alert("Sale successful!");
+    } catch (err) {
+      alert(err.response?.data?.error || "Sale failed");
+    }
+  };
+
   const updateMyPrice = async (ticker) => {
     const p = prompt("Enter new market price:");
     if (!p) return;
@@ -127,9 +139,20 @@ export const Dashboard = () => {
           <div style={cardStyle}>
             <h4 style={{ margin: '0 0 15px 0' }}><Briefcase size={18} /> Your Portfolio</h4>
             {portfolio.map(item => (
-              <div key={item.ticker} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px' }}>
-                <span>{item.ticker} ({item.sharesHeld})</span>
-                <span style={{ fontWeight: '600' }}>${((prices[item.ticker] || item.lastKnownPrice) * item.sharesHeld).toLocaleString()}</span>
+              <div key={item.ticker} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1px solid #f0f0f0', paddingBottom: '10px' }}>
+                <div>
+                  <div style={{ fontWeight: 'bold' }}>{item.ticker} ({item.sharesHeld} units)</div>
+                  <div style={{ fontSize: '14px', color: '#3b82f6' }}>
+                    Value: ${((prices[item.ticker] || item.lastKnownPrice) * item.sharesHeld).toLocaleString()}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleSell(item.ticker)}
+                  disabled={item.sharesHeld <= 0}
+                  style={{ padding: '4px 10px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                >
+                  Sell
+                </button>
               </div>
             ))}
             {portfolio.length === 0 && <p style={{ fontSize: '12px', color: '#999' }}>No assets owned.</p>}

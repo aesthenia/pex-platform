@@ -82,4 +82,53 @@ router.get('/my-portfolio', auth, async (req, res) => {
   }
 });
 
+router.post('/sell', auth, async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { ticker, quantity } = req.body;
+    const qty = parseInt(quantity);
+
+    if (!qty || qty <= 0) throw new Error('Invalid quantity');
+
+    const stock = await Stock.findOne({ ticker: ticker.toUpperCase() }).session(session);
+    if (!stock) throw new Error('Stock not found');
+
+    const portfolioItem = await Portfolio.findOne({ 
+      user: req.user.id, 
+      stock: stock._id 
+    }).session(session);
+
+    if (!portfolioItem || portfolioItem.sharesHeld < qty) {
+      throw new Error('Not enough shares to sell');
+    }
+
+    const revenue = stock.price * qty;
+
+    portfolioItem.sharesHeld -= qty;
+    
+    await portfolioItem.save({ session });
+
+    const user = await User.findById(req.user.id).session(session);
+    user.walletBalance += revenue;
+    await user.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    console.log(`[Trade] User ${user.username} sold ${qty} shares of ${ticker} for $${revenue}`);
+
+    res.json({ 
+      message: `Successfully sold ${qty} shares of ${ticker}`,
+      newBalance: user.walletBalance 
+    });
+
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    res.status(400).json({ error: err.message });
+  }
+});
+
 module.exports = router;
