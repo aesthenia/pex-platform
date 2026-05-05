@@ -108,7 +108,11 @@ router.post('/sell', auth, async (req, res) => {
 
     portfolioItem.sharesHeld -= qty;
     
-    await portfolioItem.save({ session });
+    if (portfolioItem.sharesHeld <= 0) {
+      await Portfolio.findByIdAndDelete(portfolioItem._id).session(session);
+    } else {
+      await portfolioItem.save({ session });
+    }
 
     const user = await User.findById(req.user.id).session(session);
     user.walletBalance += revenue;
@@ -117,10 +121,8 @@ router.post('/sell', auth, async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
-    console.log(`[Trade] User ${user.username} sold ${qty} shares of ${ticker} for $${revenue}`);
-
     res.json({ 
-      message: `Successfully sold ${qty} shares of ${ticker}`,
+      message: `Successfully sold ${qty} shares`,
       newBalance: user.walletBalance 
     });
 
